@@ -16,7 +16,7 @@
  */
 void usage();
 void printSummary(int hits, int misses, int evictions);
-int debug = 0;
+int debug = 1;
 
 /**
  * Declare all structs that will be used in the cache lab
@@ -43,8 +43,8 @@ typedef struct
 /**
  * More declarations of other functions
 */
-void readFile(FILE *pfile, Cache c, int e);
-void cSimu(Cache c, unsigned long address, int size, int e);
+void readFile(FILE *pfile, Cache c, int e, int s, int b);
+void cSimu(Cache c, unsigned long address, int size, int e, int s, int b);
 Cache organizeCache(int s, int E, int b);
 
 /**
@@ -88,7 +88,7 @@ int main(int argc, char **argv)
     }
 	wholeCache = organizeCache(s,E,b);
 	if(debug) printf("About to go in to readFile function...\n");
-	readFile(pfile, wholeCache, E);
+	readFile(pfile, wholeCache, E, s, b);
 	printSummary(0, 0, 0);
 	return 0; 
 }
@@ -139,7 +139,7 @@ Cache organizeCache(int s, int E, int b)
  * Goes through the file and looks the operation and from there calls cSimu 
  * to simulate the function. 
  */
-void readFile(FILE *pfile, Cache c, int e)
+void readFile(FILE *pfile, Cache c, int e, int s, int b)
 {
 	char operation;
 	long address;
@@ -156,13 +156,13 @@ void readFile(FILE *pfile, Cache c, int e)
 		switch(operation)
 		{
 			case 'M':
-				cSimu(c, address, size, e);
+				cSimu(c, address, size, e, s, b);
 				break;
 			case 'L':
-				cSimu(c, address, size, e);
+				cSimu(c, address, size, e, s, b);
 				break;
 			case 'S':
-				cSimu(c, address, size, e);
+				cSimu(c, address, size, e, s, b);
 				break;
 			default:
 				printf("I was used\n");
@@ -173,13 +173,41 @@ void readFile(FILE *pfile, Cache c, int e)
  /**
   * cSimu is a function to similate the entire cache is called in the readLine function
  */
-void cSimu(Cache c, unsigned long address, int size, int e)
+void cSimu(Cache c, unsigned long address, int size, int e, int s, int b)
 {
-	for(int valid = 0; valid < e; valid++)
-	{
+	short ocupado = 1;
+	int hits = 0;
+	int evictions = 0;
+	unsigned long setAddress = (address << (64 - s - b)) >> (64 - s);
+	unsigned long int localTag = address >> (s + b);
+	cacheSet *currentSet = &c.cSet[setAddress];
 
+	if(debug) printf("cSimu e = %d\n", e);
+	for(int lns = 0; lns < e; lns++)
+	{
+		if(currentSet->cLine[lns].validBit && currentSet->cLine[lns].tag == localTag)
+		{
+			if(debug)printf("We have a hit!!!!!!\n");
+			hits++;
+		}
+		if(!currentSet->cLine[lns].validBit)
+		{
+			if(debug)printf("Validbit check goes into else\n");
+			ocupado = 0;
+		}
+	}
+	if(ocupado)
+	{
+		if(debug)printf("We have to evict!!!\n");
+		evictions++;
 	}
 }
+
+
+
+
+
+
 
 /**
  * usage function for clarified instructions
